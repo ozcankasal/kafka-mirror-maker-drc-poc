@@ -75,6 +75,7 @@ Full write-up, including the contrast with `kafka-multi`'s stretched-cluster app
 | [`clients/app/`](clients/app) | The producer/consumer Python application |
 | [`clients/k8s/`](clients/k8s) | Client `Deployment` and `ConfigMap` manifests |
 | [`scripts/`](scripts) | Operational scripts — `status.sh`, `failover.sh`, `start-failback-resync.sh`, `complete-failback.sh` |
+| [`notebook/`](notebook) | Jupyter notebook that runs and records a full failover/fail-back cycle |
 | [`docs/`](docs) | Architecture notes and the DR runbook |
 
 ## Prerequisites
@@ -128,10 +129,13 @@ microk8s kubectl apply -f clients/k8s/producer.yaml -f clients/k8s/consumer.yaml
 
 For the full walkthrough — including real captured log output from an actual failover/fail-back cycle, and the fail-back duplication finding — see [docs/dr-runbook.md](docs/dr-runbook.md).
 
+Prefer to see it running rather than read about it? [`notebook/drc-simulation.ipynb`](notebook/drc-simulation.ipynb) drives the exact same scripts against a live cluster and captures the real output of a full primary → dr → primary cycle (recorded run: producer cutover in ~78s, consumer cutover on fail-back in ~63s, 185 replayed duplicates correctly dropped by the client's dedup logic).
+
 ## Documentation
 
 - [docs/architecture.md](docs/architecture.md) — how the two clusters and MirrorMaker 2 fit together, the contrast with `kafka-multi`'s stretched-cluster approach, `IdentityReplicationPolicy`, why consumers must be idempotent, resource sizing.
 - [docs/dr-runbook.md](docs/dr-runbook.md) — step-by-step failover/fail-back runbook with real, captured verification output, plus a full write-up of the fail-back duplication finding.
+- [notebook/drc-simulation.ipynb](notebook/drc-simulation.ipynb) — the same scenario, run live and recorded end to end.
 
 ## Design notes & trade-offs
 
