@@ -1,0 +1,58 @@
+# The vendored strimzi-cluster-operator-1.1.0.yaml bundle grants the operator's
+# ServiceAccount permissions scoped to its own namespace (kafka-primary) via
+# RoleBindings. Since this operator watches TWO namespaces (kafka-primary and
+# kafka-dr, see STRIMZI_NAMESPACE in strimzi-cluster-operator-1.1.0.yaml), the
+# same RoleBindings need to also exist in kafka-dr, pointing at the operator's
+# ServiceAccount which lives in kafka-primary. This is Strimzi's documented
+# "several namespaces" RBAC pattern.
+#
+# The leader-election RoleBinding is deliberately NOT duplicated here: the
+# Lease object it grants access to only needs to exist in the operator's own
+# namespace (kafka-primary).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: strimzi-cluster-operator
+  namespace: kafka-dr
+  labels:
+    app: strimzi
+subjects:
+  - kind: ServiceAccount
+    name: strimzi-cluster-operator
+    namespace: kafka-primary
+roleRef:
+  kind: ClusterRole
+  name: strimzi-cluster-operator-namespaced
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: strimzi-cluster-operator-watched
+  namespace: kafka-dr
+  labels:
+    app: strimzi
+subjects:
+  - kind: ServiceAccount
+    name: strimzi-cluster-operator
+    namespace: kafka-primary
+roleRef:
+  kind: ClusterRole
+  name: strimzi-cluster-operator-watched
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: strimzi-cluster-operator-entity-operator-delegation
+  namespace: kafka-dr
+  labels:
+    app: strimzi
+subjects:
+  - kind: ServiceAccount
+    name: strimzi-cluster-operator
+    namespace: kafka-primary
+roleRef:
+  kind: ClusterRole
+  name: strimzi-entity-operator
+  apiGroup: rbac.authorization.k8s.io
