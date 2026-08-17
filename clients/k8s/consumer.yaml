@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: consumer
+  namespace: kafka-clients
+  labels:
+    app: consumer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: consumer
+  template:
+    metadata:
+      labels:
+        app: consumer
+    spec:
+      containers:
+        - name: consumer
+          image: python:3.12-slim
+          command: ["sh", "-c"]
+          args:
+            - pip install --no-cache-dir --quiet confluent-kafka==2.6.1 && exec python /app/consumer.py
+          env:
+            - name: PRIMARY_BOOTSTRAP_SERVERS
+              value: primary-cluster-kafka-bootstrap.kafka-primary.svc:9092
+            - name: DR_BOOTSTRAP_SERVERS
+              value: dr-cluster-kafka-bootstrap.kafka-dr.svc:9092
+            - name: TOPIC
+              value: drc-demo-topic
+            - name: CONSUMER_GROUP
+              value: cg-drc
+          volumeMounts:
+            - name: app-code
+              mountPath: /app
+              readOnly: true
+            - name: active-cluster
+              mountPath: /etc/active-cluster
+              readOnly: true
+          resources:
+            requests:
+              cpu: "50m"
+              memory: 128Mi
+            limits:
+              cpu: "200m"
+              memory: 256Mi
+      volumes:
+        - name: app-code
+          configMap:
+            name: client-app-code
+        - name: active-cluster
+          configMap:
+            name: active-cluster-config

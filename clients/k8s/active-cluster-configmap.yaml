@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: active-cluster-config
+  namespace: kafka-clients
+data:
+  ACTIVE_CLUSTER: primary
