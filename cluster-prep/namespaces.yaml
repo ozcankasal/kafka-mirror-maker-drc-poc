@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kafka-primary
+  labels:
+    app.kubernetes.io/part-of: kafka-mirror-drc-poc
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kafka-dr
+  labels:
+    app.kubernetes.io/part-of: kafka-mirror-drc-poc
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kafka-clients
+  labels:
+    app.kubernetes.io/part-of: kafka-mirror-drc-poc
