@@ -1,0 +1,70 @@
+# Fail-back resync leg: dr -> primary. NOT applied by default.
+# Only apply this once primary has recovered from a disaster, to replicate
+# back whatever was written directly to dr while it was active
+# (scripts/start-failback-resync.sh). Mutually exclusive with
+# mm2-primary-to-dr.yaml being active in the same direction it reverses —
+# see docs/dr-runbook.md for why running both legs at once is unsafe with
+# IdentityReplicationPolicy (mirror loop).
+#
+# sourceConnector.state starts "stopped" on purpose: dr's copy of
+# drc-demo-topic contains BOTH genuinely-new dr-origin records AND the old
+# primary-origin records that mm2-primary-to-dr mirrored forward before
+# failover. A naive resync mirrors the whole topic back, re-injecting that
+# old primary-origin data into primary as duplicates.
+#
+# It's not enough to just apply this file and then stop the connector,
+# either: Kafka Connect always starts a brand-new connector RUNNING, and
+# Strimzi's "stopped" is only applied via a follow-up call once it
+# reconciles — there's a real window in between where it's live. So
+# start-failback-resync.sh brings this connector up first against a
+# topicsPattern that matches nothing real, confirms STOPPED, corrects its
+# per-partition starting offsets to the watermark captured at failover
+# time, THEN switches topicsPattern to the real value and resumes — see
+# docs/dr-runbook.md for the full story, including how this was found.
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaMirrorMaker2
+metadata:
+  name: mm2-dr-to-primary
+  namespace: kafka-primary
+spec:
+  version: 4.3.0
+  replicas: 1
+  target:
+    alias: primary
+    bootstrapServers: primary-cluster-kafka-bootstrap.kafka-primary.svc:9092
+    groupId: mirrormaker2-dr-to-primary-cluster
+    configStorageTopic: mm2-dr-to-primary-configs
+    statusStorageTopic: mm2-dr-to-primary-status
+    offsetStorageTopic: mm2-dr-to-primary-offsets
+    config:
+      config.storage.replication.factor: 3
+      offset.storage.replication.factor: 3
+      status.storage.replication.factor: 3
+  mirrors:
+    - source:
+        alias: dr
+        bootstrapServers: dr-cluster-kafka-bootstrap.kafka-dr.svc:9092
+      sourceConnector:
+        tasksMax: 1
+        state: stopped
+        config:
+          replication.policy.class: org.apache.kafka.connect.mirror.IdentityReplicationPolicy
+          replication.factor: 3
+          sync.topic.configs.enabled: true
+          sync.topic.acls.enabled: false
+          refresh.topics.interval.seconds: 15
+      checkpointConnector:
+        tasksMax: 1
+        config:
+          replication.policy.class: org.apache.kafka.connect.mirror.IdentityReplicationPolicy
+          sync.group.offsets.enabled: true
+          refresh.groups.interval.seconds: 15
+      topicsPattern: "drc-demo-topic"
+      groupsPattern: "cg-drc"
+  resources:
+    requests:
+      cpu: "200m"
+      memory: 512Mi
+    limits:
+      cpu: "500m"
+      memory: 768Mi

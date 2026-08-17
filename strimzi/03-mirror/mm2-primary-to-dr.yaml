@@ -1,0 +1,49 @@
+# Steady-state mirroring: primary -> dr. Applied as part of the normal deploy;
+# stopped during a real failover (scripts/failover.sh) so writes made
+# directly against dr afterwards can't loop back into primary.
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaMirrorMaker2
+metadata:
+  name: mm2-primary-to-dr
+  namespace: kafka-dr
+spec:
+  version: 4.3.0
+  replicas: 1
+  target:
+    alias: dr
+    bootstrapServers: dr-cluster-kafka-bootstrap.kafka-dr.svc:9092
+    groupId: mirrormaker2-primary-to-dr-cluster
+    configStorageTopic: mm2-primary-to-dr-configs
+    statusStorageTopic: mm2-primary-to-dr-status
+    offsetStorageTopic: mm2-primary-to-dr-offsets
+    config:
+      config.storage.replication.factor: 3
+      offset.storage.replication.factor: 3
+      status.storage.replication.factor: 3
+  mirrors:
+    - source:
+        alias: primary
+        bootstrapServers: primary-cluster-kafka-bootstrap.kafka-primary.svc:9092
+      sourceConnector:
+        tasksMax: 1
+        config:
+          replication.policy.class: org.apache.kafka.connect.mirror.IdentityReplicationPolicy
+          replication.factor: 3
+          sync.topic.configs.enabled: true
+          sync.topic.acls.enabled: false
+          refresh.topics.interval.seconds: 15
+      checkpointConnector:
+        tasksMax: 1
+        config:
+          replication.policy.class: org.apache.kafka.connect.mirror.IdentityReplicationPolicy
+          sync.group.offsets.enabled: true
+          refresh.groups.interval.seconds: 15
+      topicsPattern: "drc-demo-topic"
+      groupsPattern: "cg-drc"
+  resources:
+    requests:
+      cpu: "200m"
+      memory: 512Mi
+    limits:
+      cpu: "500m"
+      memory: 768Mi
