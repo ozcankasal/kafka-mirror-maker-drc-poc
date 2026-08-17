@@ -17,7 +17,7 @@
 
 ## Overview
 
-This is the follow-up to [`kafka-multi`](../kafka-multi), a sibling PoC that simulated DR with a single Kafka cluster stretched across two zones. That approach only works when both "zones" are close enough to share one KRaft quorum. This repo simulates the other real Kafka DR pattern: **two genuinely independent clusters**, kept in sync by asynchronous replication, standing in for a real cross-region or cross-provider disaster recovery pair.
+This is the follow-up to [`kafka-multi`](https://github.com/ozcankasal/kafka-drc-simulation), a sibling PoC that simulated DR with a single Kafka cluster stretched across two zones. That approach only works when both "zones" are close enough to share one KRaft quorum. This repo simulates the other real Kafka DR pattern: **two genuinely independent clusters**, kept in sync by asynchronous replication, standing in for a real cross-region or cross-provider disaster recovery pair.
 
 It builds two separate **KRaft-mode Kafka 4.3.0 clusters** (Strimzi-managed) — `primary-cluster` and `dr-cluster` — with no shared infrastructure between them, and a [`KafkaMirrorMaker2`](strimzi/03-mirror) pipeline continuously mirroring the demo topic and its consumer group's offsets from primary to dr. In normal operation, a producer/consumer pair reads and writes against `primary-cluster`. On a simulated disaster, a script stops the mirror, flips a config value, and the same clients reconnect to `dr-cluster` — which already has the data, thanks to the mirror. Failing back is a deliberate two-step, documented process, not automatic — because in the real world it shouldn't be either.
 
@@ -87,8 +87,8 @@ Full write-up, including the contrast with `kafka-multi`'s stretched-cluster app
 ## Quick start
 
 ```bash
-git clone <this-repo-url>
-cd kafka-mirror
+git clone git@github.com:ozcankasal/kafka-mirror-maker-drc-poc.git
+cd kafka-mirror-maker-drc-poc
 
 # 1. Free up cluster resources (optional — only if you're low on capacity) and create namespaces
 ./cluster-prep/scale-down-unrelated.sh
